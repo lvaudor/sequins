@@ -1,0 +1,111 @@
+---
+title: "flat_full.Rmd for working package"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+<!-- Run this 'development' chunk -->
+<!-- Store every call to library() that you need to explore your functions -->
+
+```{r development, include=FALSE}
+library(testthat)
+library(sequins)
+library(glitter)
+```
+
+# plot query as a graph
+
+```{r function-graph_query}
+#' A plot of the query depicted as a graph
+#' @param query a query as returned by glitter (before call to spq_perform)
+#' @param layout type of layout. Can be e.g. "tree"
+#' @param flip whether to flip the coordinates. Defaults to FALSE 
+#' @return
+#' a plot of the graph
+#' @export
+#'
+#' @examples
+graph_query <- function(query, layout="fr", flip=FALSE) {
+  triples=query$triples %>% 
+    dplyr::mutate(data=purrr::map(triple,glitter:::decompose_triple_pattern)) %>%  
+    dplyr::mutate(from=purrr::map_chr(data,~.x$subject),
+                  to  =purrr::map_chr(data,~.x$object),
+                  link=purrr::map_chr(data,~.x$verb)) %>% 
+    dplyr::select(-data)
+  graph=tidygraph::as_tbl_graph(triples) %>% 
+    dplyr::mutate(unknown=stringr::str_detect(name,"^\\?"))
+  graph_layout=ggraph::create_layout(graph, layout=layout)
+  graphplot=ggraph::ggraph(graph_layout)+
+    ggraph::geom_edge_link(
+      ggplot2::aes(label=link,
+                   end_cap=ggraph::label_rect(to, padding=ggplot2::margin(3,3,3,3,"mm"))),
+      angle_calc = 'along',
+      label_dodge = grid::unit(2.5, 'mm'),
+      arrow = ggplot2::arrow(length = grid::unit(6, 'mm')),
+      )+
+    ggraph::geom_node_label(ggplot2::aes(label=name,fill=unknown),
+                            size=3,
+                            )+
+    ggplot2::theme_void()
+  if(flip){graphplot=graphplot %>%
+    ggplot2::coord_flip()
+  }
+  graphplot
+  return(graphplot)
+}
+```
+
+
+
+```{r examples-graph_query-}
+library(glitter)
+query=spq_init() %>%
+  spq_add("?mayor wdt:P31 ?species") %>%
+  # dog, cat or chicken
+  spq_set(species = c('wd:Q144','wd:Q146', 'wd:Q780')) %>%
+  # who occupy the function
+  spq_add("?mayor p:P39 ?node") %>%
+  # of mayor
+  spq_add("?node ps:P39 wd:Q30185") %>%
+  # of some places
+  spq_add("?node pq:P642 ?place") 
+
+graph_query(query, layout="tree", flip=TRUE)
+
+```
+
+```{r tests-graph_query}
+
+```
+
+
+
+```{r development-inflate, eval=FALSE}
+# Keep eval=FALSE to avoid infinite loop in case you hit the knit button
+# Execute in the console directly
+fusen::inflate(flat_file = "dev/flat_full.Rmd", vignette_name = "Get started")
+```
+
+# Other examples
+
+
+
+```{r}
+query=spq_init() %>%
+  spq_add("?doc dcterms:creator ?createur") %>%        
+  spq_add("?createur hal:structure ?affil") %>%        
+  spq_add("?createur hal:person ?personne") %>%        
+  spq_add("?personne foaf:name 'Lise Vaudor'") %>%
+  spq_add("?affil skos:prefLabel ?affiliation") %>%    
+  spq_add("?doc dcterms:type ?type") %>%            # récupère le type de document
+  spq_add("?type skos:prefLabel ?type_label") %>%   # étiquette le type de document      
+  spq_filter(lang(type_label) == 'fr') %>%          # ... en français
+  spq_add("?doc dcterms:bibliographicCitation ?citation") %>% # récupère la citation
+  spq_add("?doc dcterms:issued ?date") 
+
+graph_query(query, layout="tree")
+
+
+```
+
