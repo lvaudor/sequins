@@ -1,0 +1,29 @@
+Package: sequins
+Title: Show Glitter Queries (SPARQL Queries Written As R Code) As Graphs
+Version: 0.0.0.9000
+Authors@R: 
+    person("Lise", "Vaudor", , "lise.vaudor@ens-lyon.fr", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0003-1844-6425"))
+Description: Write your queries to SPARQL endpoints as R glitter code and
+    then show the query graphically with sequins.
+License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
+    license
+Imports: 
+    dplyr,
+    ggplot2,
+    ggraph,
+    glitter,
+    grid,
+    magrittr,
+    purrr,
+    stringr,
+    tidygraph
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: 
+    knitr
+Config/fusen/version: 0.5.0.9008
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.3
