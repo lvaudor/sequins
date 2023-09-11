@@ -34,7 +34,8 @@ graph_query <- function(query, layout="fr", flip=FALSE) {
                   link=purrr::map_chr(data,~.x$verb)) %>% 
     dplyr::select(-data)
   graph=tidygraph::as_tbl_graph(triples) %>% 
-    dplyr::mutate(unknown=stringr::str_detect(name,"^\\?"))
+    dplyr::mutate(unknown=stringr::str_detect(name,"^\\?")) %>% 
+    dplyr::mutate()
   graph_layout=ggraph::create_layout(graph, layout=layout)
   graphplot=ggraph::ggraph(graph_layout)+
     ggraph::geom_edge_link(
