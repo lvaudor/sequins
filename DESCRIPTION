@@ -8,6 +8,7 @@ Description: Write your queries to SPARQL endpoints as R glitter code and
     then show the query graphically with sequins.
 License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
     license
+URL: https://lvaudor.github.io/sequins/
 Imports: 
     dplyr,
     ggplot2,
@@ -27,4 +28,3 @@ Config/fusen/version: 0.5.0.9008
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.3
-URL: https://lvaudor.github.io/sequins/

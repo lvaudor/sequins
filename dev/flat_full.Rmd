@@ -51,7 +51,6 @@ graph_query <- function(query, layout="fr", flip=FALSE) {
   if(flip){graphplot=graphplot +
     ggplot2::coord_flip()
   }
-  graphplot
   return(graphplot)
 }
 ```

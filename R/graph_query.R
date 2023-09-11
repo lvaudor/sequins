@@ -45,9 +45,8 @@ graph_query <- function(query, layout="fr", flip=FALSE) {
                             size=3,
                             )+
     ggplot2::theme_void()
-  if(flip){graphplot=graphplot %>%
+  if(flip){graphplot=graphplot +
     ggplot2::coord_flip()
   }
-  graphplot
   return(graphplot)
 }
