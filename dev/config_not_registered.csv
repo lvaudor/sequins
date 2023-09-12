@@ -1,2 +1,5 @@
 "type","path","origin"
+"R","R/get_label.R","Possibly deprecated file. Please check its link with detected flat source: dev/flat_full.Rmd"
 "R","R/utils-pipe.R","No existing source path found."
+"test","tests/testthat/test-get_label.R","Possibly deprecated file. Please check its link with detected flat source: dev/flat_full.Rmd"
+"test","tests/testthat/test-label.R","Possibly deprecated file. Please check its link with detected flat source: dev/flat_full.Rmd"

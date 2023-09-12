@@ -28,8 +28,8 @@ the label corresponding to the string
 Title
 }
 \examples{
-get_label("wd:Q152088",language="en")
-get_label("'David Bowie'")
-get_label('"John Doe"')
-get_label("?item")
+sequins::get_label("wd:Q152088",language="en")
+sequins::get_label("'David Bowie'")
+sequins::get_label('"John Doe"')
+sequins::get_label("?item")
 }

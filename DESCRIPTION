@@ -24,9 +24,10 @@ Suggests:
     knitr,
     rmarkdown,
     testthat
-Remotes: lvaudor/glitter
 VignetteBuilder: 
     knitr
+Remotes: 
+    lvaudor/glitter
 Config/fusen/version: 0.5.0.9008
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
