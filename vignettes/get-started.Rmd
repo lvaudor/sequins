@@ -60,6 +60,27 @@ query=spq_init() %>%
 
 graph_query(query, layout="tree")
 
+graph_query(query, flip=TRUE, label=TRUE)
+
 
 ```
+
+# get_label
+
+    
+
+  
+
+```{r example-label}
+get_label("wd:Q152088",language="en")
+get_label("'David Bowie'")
+get_label('"John Doe"')
+get_label("?item")
+```
+
+  
+
+  
+
+
 

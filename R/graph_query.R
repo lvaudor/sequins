@@ -4,6 +4,7 @@
 #' @param query a query as returned by glitter (before call to spq_perform)
 #' @param layout type of layout. Can be e.g. "tree"
 #' @param flip whether to flip the coordinates. Defaults to FALSE 
+#' @param label whether to label the identifiers in the graph
 #' @return
 #' a plot of the graph
 #' @export
@@ -23,7 +24,7 @@
 #'
 #' graph_query(query, layout="tree", flip=TRUE)
 #'
-graph_query <- function(query, layout="fr", flip=FALSE) {
+graph_query <- function(query, layout="fr", flip=FALSE, label=FALSE) {
   triples=query$triples %>% 
     dplyr::mutate(data=purrr::map(triple,glitter:::decompose_triple_pattern)) %>%  
     dplyr::mutate(from=purrr::map_chr(data,~.x$subject),
@@ -31,7 +32,12 @@ graph_query <- function(query, layout="fr", flip=FALSE) {
                   link=purrr::map_chr(data,~.x$verb)) %>% 
     dplyr::select(-data)
   graph=tidygraph::as_tbl_graph(triples) %>% 
-    dplyr::mutate(unknown=stringr::str_detect(name,"^\\?"))
+    dplyr::mutate(unknown=stringr::str_detect(name,"^\\?")) %>% 
+    dplyr::mutate(label=name)
+  if(label){
+    graph=graph %>% 
+      dplyr::mutate(label=purrr::map_chr(name,get_label))
+  }
   graph_layout=ggraph::create_layout(graph, layout=layout)
   graphplot=ggraph::ggraph(graph_layout)+
     ggraph::geom_edge_link(
@@ -41,7 +47,7 @@ graph_query <- function(query, layout="fr", flip=FALSE) {
       label_dodge = grid::unit(2.5, 'mm'),
       arrow = ggplot2::arrow(length = grid::unit(6, 'mm')),
       )+
-    ggraph::geom_node_label(ggplot2::aes(label=name,fill=unknown),
+    ggraph::geom_node_label(ggplot2::aes(label=label,fill=unknown),
                             size=3,
                             )+
     ggplot2::theme_void()

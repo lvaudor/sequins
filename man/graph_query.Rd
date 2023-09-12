@@ -4,7 +4,7 @@
 \alias{graph_query}
 \title{A plot of the query depicted as a graph}
 \usage{
-graph_query(query, layout = "fr", flip = FALSE)
+graph_query(query, layout = "fr", flip = FALSE, label = FALSE)
 }
 \arguments{
 \item{query}{a query as returned by glitter (before call to spq_perform)}
@@ -12,6 +12,8 @@ graph_query(query, layout = "fr", flip = FALSE)
 \item{layout}{type of layout. Can be e.g. "tree"}
 
 \item{flip}{whether to flip the coordinates. Defaults to FALSE}
+
+\item{label}{whether to label the identifiers in the graph}
 }
 \value{
 a plot of the graph

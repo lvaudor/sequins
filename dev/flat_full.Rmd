@@ -21,12 +21,13 @@ library(glitter)
 #' @param query a query as returned by glitter (before call to spq_perform)
 #' @param layout type of layout. Can be e.g. "tree"
 #' @param flip whether to flip the coordinates. Defaults to FALSE 
+#' @param label whether to label the identifiers in the graph
 #' @return
 #' a plot of the graph
 #' @export
 #'
 #' @examples
-graph_query <- function(query, layout="fr", flip=FALSE) {
+graph_query <- function(query, layout="fr", flip=FALSE, label=FALSE) {
   triples=query$triples %>% 
     dplyr::mutate(data=purrr::map(triple,glitter:::decompose_triple_pattern)) %>%  
     dplyr::mutate(from=purrr::map_chr(data,~.x$subject),
@@ -35,7 +36,11 @@ graph_query <- function(query, layout="fr", flip=FALSE) {
     dplyr::select(-data)
   graph=tidygraph::as_tbl_graph(triples) %>% 
     dplyr::mutate(unknown=stringr::str_detect(name,"^\\?")) %>% 
-    dplyr::mutate()
+    dplyr::mutate(label=name)
+  if(label){
+    graph=graph %>% 
+      dplyr::mutate(label=purrr::map_chr(name,get_label))
+  }
   graph_layout=ggraph::create_layout(graph, layout=layout)
   graphplot=ggraph::ggraph(graph_layout)+
     ggraph::geom_edge_link(
@@ -45,7 +50,7 @@ graph_query <- function(query, layout="fr", flip=FALSE) {
       label_dodge = grid::unit(2.5, 'mm'),
       arrow = ggplot2::arrow(length = grid::unit(6, 'mm')),
       )+
-    ggraph::geom_node_label(ggplot2::aes(label=name,fill=unknown),
+    ggraph::geom_node_label(ggplot2::aes(label=label,fill=unknown),
                             size=3,
                             )+
     ggplot2::theme_void()
@@ -106,6 +111,50 @@ query=spq_init() %>%
 
 graph_query(query, layout="tree")
 
+graph_query(query, flip=TRUE, label=TRUE)
+
 
 ```
+
+# get_label
+    
+```{r function-get_label}
+#' Title
+#' @param string the string (a part of a triple pattern) to label
+#' @param language the language in which to return the label (defaults to "en")
+#' @param endpoint the SPARQL endpoint that is being queried (defaults to "Wikidata")
+#' @param labelling_prop the name of the labelling property, for instance "skos:prefLabel". Defaults to "rdfs:label"
+#' This function takes a component of a triple pattern as input and returns (if it exists) a corresponding human-readable label.
+#' @return the label corresponding to the string
+#' @export
+get_label=function(string, language="en",endpoint="Wikidata", labelling_prop="rdfs:label"){
+  # if the string starts with "?" or "'" or '"'
+  if(stringr::str_detect(string,"^\\?|\\'")|stringr::str_detect(string,'^\\"')){
+    return(string)
+  }
+  result=spq_init() %>% 
+    spq_add(glue::glue("{string} {labelling_prop} ?string_label")) %>% 
+    spq_mutate(languages=lang(string_label)) %>% 
+    spq_perform(endpoint=endpoint) %>% 
+    dplyr::filter(languages==language) %>% 
+    .$string_label
+  return(result)
+}
+
+```
+  
+```{r example-label}
+get_label("wd:Q152088",language="en")
+get_label("'David Bowie'")
+get_label('"John Doe"')
+get_label("?item")
+```
+  
+```{r tests-label}
+test_that("label works", {
+  expect_true(inherits(get_label, "function")) 
+})
+```
+  
+
 
