@@ -44,7 +44,7 @@ graph_query <- function(query, layout="fr", flip=FALSE, label=FALSE) {
   # if label is TRUE, change nodes' names from identifiers to labels 
   if(label){
     graph=graph %>% 
-      dplyr::mutate(label=purrr::map_chr(name,get_label))
+      dplyr::mutate(label=purrr::map_chr(name,sequins::get_label))
   }
   # If there are set values for a variable:
   tib_values=query$vars %>% 
@@ -115,7 +115,7 @@ fusen::inflate(flat_file = "dev/flat_full.Rmd", vignette_name = "Get started")
 
 
 
-```{r}
+```{r fig.height=8}
 query=spq_init() %>%
   spq_add("?doc dcterms:creator ?createur") %>%        
   spq_add("?createur hal:structure ?affil") %>%        
@@ -129,10 +129,6 @@ query=spq_init() %>%
   spq_add("?doc dcterms:issued ?date") 
 
 graph_query(query, layout="tree")
-
-graph_query(query, flip=TRUE, label=TRUE)
-
-
 ```
 
 # get_label
