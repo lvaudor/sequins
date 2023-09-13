@@ -25,6 +25,7 @@
 #' graph_query(query, layout="tree", flip=TRUE)
 #'
 graph_query <- function(query, layout="fr", flip=FALSE, label=FALSE) {
+  # Create graph from triples
   triples=query$triples %>% 
     dplyr::mutate(data=purrr::map(triple,glitter:::decompose_triple_pattern)) %>%  
     dplyr::mutate(from=purrr::map_chr(data,~.x$subject),
@@ -32,12 +33,28 @@ graph_query <- function(query, layout="fr", flip=FALSE, label=FALSE) {
                   link=purrr::map_chr(data,~.x$verb)) %>% 
     dplyr::select(-data)
   graph=tidygraph::as_tbl_graph(triples) %>% 
-    dplyr::mutate(unknown=stringr::str_detect(name,"^\\?")) %>% 
-    dplyr::mutate(label=name)
+    dplyr::mutate(type=stringr::str_detect(name,"^\\?")) %>% 
+    dplyr::mutate(type=dplyr::case_when(type~"unknown",
+                                        !type~"set")) %>% 
+    dplyr::mutate(label=name) %>% 
+    dplyr::mutate(num=1:dplyr::n())
+  # if label is TRUE, change nodes' names from identifiers to labels 
   if(label){
     graph=graph %>% 
       dplyr::mutate(label=purrr::map_chr(name,get_label))
   }
+  # If there are set values for a variable:
+  tib_values=query$vars %>% 
+    dplyr::filter(!is.na(values))
+  if(nrow(tib_values)>0){
+    for (i in 1:nrow(tib_values)){
+       var=paste0("?",tib_values$name[i])
+       graph=graph %>% 
+          dplyr::mutate(type=dplyr::case_when(name==var~"set",
+                                              TRUE~type))      
+    }
+  }
+  # Create graphplot
   graph_layout=ggraph::create_layout(graph, layout=layout)
   graphplot=ggraph::ggraph(graph_layout)+
     ggraph::geom_edge_link(
@@ -47,7 +64,7 @@ graph_query <- function(query, layout="fr", flip=FALSE, label=FALSE) {
       label_dodge = grid::unit(2.5, 'mm'),
       arrow = ggplot2::arrow(length = grid::unit(6, 'mm')),
       )+
-    ggraph::geom_node_label(ggplot2::aes(label=label,fill=unknown),
+    ggraph::geom_node_label(ggplot2::aes(label=label,fill=type),
                             size=3,
                             )+
     ggplot2::theme_void()
