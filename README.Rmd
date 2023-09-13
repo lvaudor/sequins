@@ -1,3 +1,9 @@
+---
+output:
+  md_document:
+    variant: markdown_github
+---
+
 <img src="man/figures/hex-sequins_small.png" align="right" />
 
 # sequins
@@ -21,6 +27,7 @@ devtools::install_github("lvaudor/sequins")
 This is a basic example of how to use the function sequins::graph_query() to show a glitter query as a graph:
 
 ```{r}
+library(glitter)
 library(sequins)
 query=spq_init() %>%
   spq_add("?mayor wdt:P31 ?species") %>%
