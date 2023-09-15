@@ -62,6 +62,7 @@ graph_query <- function(query, layout="fr", flip=FALSE, label=FALSE) {
   graphplot=ggraph::ggraph(graph_layout)+
     ggraph::geom_edge_link(
       ggplot2::aes(label=link,
+                   label_size=3,
                    end_cap=ggraph::label_rect(to, padding=ggplot2::margin(3,3,3,3,"mm"))),
       angle_calc = 'along',
       label_dodge = grid::unit(2.5, 'mm'),
