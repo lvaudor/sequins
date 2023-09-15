@@ -39,13 +39,15 @@ query=spq_init() %>%
   # of some places
   spq_add("?node pq:P642 ?place") 
 
-graph_query(query, layout="tree", flip=TRUE)
+graph_query(query, layout="tree")
+graph_query(query, label=TRUE)
+
 
 ```
 
 # Other examples
 
-```{r}
+```{r fig.height = 8}
 query=spq_init() %>%
   spq_add("?doc dcterms:creator ?createur") %>%        
   spq_add("?createur hal:structure ?affil") %>%        
@@ -59,10 +61,6 @@ query=spq_init() %>%
   spq_add("?doc dcterms:issued ?date") 
 
 graph_query(query, layout="tree")
-
-graph_query(query, flip=TRUE, label=TRUE)
-
-
 ```
 
 # get_label
