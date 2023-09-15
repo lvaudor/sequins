@@ -68,9 +68,9 @@ graph_query <- function(query, layout="fr", flip=FALSE, label=FALSE) {
       arrow = ggplot2::arrow(length = grid::unit(6, 'mm')),
       )+
     ggraph::geom_node_label(ggplot2::aes(label=label,fill=type),
-                            size=3,
-                            )+
-    ggplot2::theme_void()
+                            size=3)+
+    ggraph::theme_graph(plot_margin=ggplot2::margin(60,60,60,60))+
+    ggplot2::coord_cartesian(clip="off")
   if(flip){graphplot=graphplot +
     ggplot2::coord_flip()
   }

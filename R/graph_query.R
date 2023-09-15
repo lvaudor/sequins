@@ -22,7 +22,9 @@
 #'   # of some places
 #'   spq_add("?node pq:P642 ?place") 
 #'
-#' graph_query(query, layout="tree", flip=TRUE)
+#' graph_query(query, layout="tree")
+#' graph_query(query, label=TRUE)
+#'
 #'
 graph_query <- function(query, layout="fr", flip=FALSE, label=FALSE) {
   # Create graph from triples
@@ -41,7 +43,7 @@ graph_query <- function(query, layout="fr", flip=FALSE, label=FALSE) {
   # if label is TRUE, change nodes' names from identifiers to labels 
   if(label){
     graph=graph %>% 
-      dplyr::mutate(label=purrr::map_chr(name,get_label))
+      dplyr::mutate(label=purrr::map_chr(name,sequins::get_label))
   }
   # If there are set values for a variable:
   tib_values=query$vars %>% 
@@ -65,9 +67,9 @@ graph_query <- function(query, layout="fr", flip=FALSE, label=FALSE) {
       arrow = ggplot2::arrow(length = grid::unit(6, 'mm')),
       )+
     ggraph::geom_node_label(ggplot2::aes(label=label,fill=type),
-                            size=3,
-                            )+
-    ggplot2::theme_void()
+                            size=3)+
+    ggraph::theme_graph(plot_margin=ggplot2::margin(60,60,60,60))+
+    ggplot2::coord_cartesian(clip="off")
   if(flip){graphplot=graphplot +
     ggplot2::coord_flip()
   }

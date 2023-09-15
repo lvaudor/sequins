@@ -34,6 +34,8 @@ query=spq_init() \%>\%
   # of some places
   spq_add("?node pq:P642 ?place") 
 
-graph_query(query, layout="tree", flip=TRUE)
+graph_query(query, layout="tree")
+graph_query(query, label=TRUE)
+
 
 }
