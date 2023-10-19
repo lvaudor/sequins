@@ -2,5 +2,8 @@
 
 export("%>%")
 export(get_label)
+export(get_label_1)
 export(graph_query)
+export(plot_query)
+export(plot_query_step)
 importFrom(magrittr,"%>%")

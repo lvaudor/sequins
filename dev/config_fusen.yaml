@@ -1,8 +1,13 @@
 flat_full.Rmd:
   path: dev/flat_full.Rmd
   state: active
-  R: R/graph_query.R
-  tests: []
+  R:
+  - R/get_label.R
+  - R/graph_label.R
+  - R/graph_query.R
+  tests:
+  - tests/testthat/test-get_label.R
+  - tests/testthat/test-graph_label.R
   vignettes: vignettes/get-started.Rmd
   inflate:
     flat_file: dev/flat_full.Rmd

@@ -2,40 +2,22 @@
 % Please edit documentation in R/graph_query.R
 \name{graph_query}
 \alias{graph_query}
-\title{A plot of the query depicted as a graph}
+\title{A graph depicting the query}
 \usage{
-graph_query(query, layout = "fr", flip = FALSE, label = FALSE)
+graph_query(query, labelling = FALSE, language = "en", set_labels = NULL)
 }
 \arguments{
 \item{query}{a query as returned by glitter (before call to spq_perform)}
 
-\item{layout}{type of layout. Can be e.g. "tree"}
+\item{labelling}{whether to label the identifiers in the graph}
 
-\item{flip}{whether to flip the coordinates. Defaults to FALSE}
+\item{language}{the language in which to label. Defaults to English ("en")}
 
-\item{label}{whether to label the identifiers in the graph}
+\item{set_labels}{a named vector to replace some elements with a user-defined label. For instance, c("hal:structure"="id de labo")}
 }
 \value{
-a plot of the graph
+a tidygraph
 }
 \description{
-A plot of the query depicted as a graph
-}
-\examples{
-library(glitter)
-query=spq_init() \%>\%
-  spq_add("?mayor wdt:P31 ?species") \%>\%
-  # dog, cat or chicken
-  spq_set(species = c('wd:Q144','wd:Q146', 'wd:Q780')) \%>\%
-  # who occupy the function
-  spq_add("?mayor p:P39 ?node") \%>\%
-  # of mayor
-  spq_add("?node ps:P39 wd:Q30185") \%>\%
-  # of some places
-  spq_add("?node pq:P642 ?place") 
-
-graph_query(query, layout="tree")
-graph_query(query, label=TRUE)
-
-
+A graph depicting the query
 }

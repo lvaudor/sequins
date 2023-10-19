@@ -9,17 +9,20 @@ Description: Write your queries to SPARQL endpoints as R glitter code and
 License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
     license
 URL: https://lvaudor.github.io/sequins/
+Depends: 
+    glitter
 Imports: 
     dplyr,
     ggplot2,
     ggraph,
-    glitter,
     glue,
     grid,
     magrittr,
     purrr,
     stringr,
-    tidygraph
+    tibble,
+    tidygraph,
+    tidyr
 Suggests: 
     knitr,
     rmarkdown,

@@ -6,105 +6,175 @@ editor_options:
 ---
 
 <!-- Run this 'development' chunk -->
+
 <!-- Store every call to library() that you need to explore your functions -->
 
 ```{r development, include=FALSE}
 library(testthat)
 library(sequins)
-library(glitter)
 ```
 
-# plot query as a graph
+# graph_query: describe query as a graph
 
 ```{r function-graph_query}
-#' A plot of the query depicted as a graph
+#' A graph depicting the query
 #' @param query a query as returned by glitter (before call to spq_perform)
-#' @param layout type of layout. Can be e.g. "tree"
-#' @param flip whether to flip the coordinates. Defaults to FALSE 
-#' @param label whether to label the identifiers in the graph
+#' @param labelling whether to label the identifiers in the graph
+#' @param language the language in which to label. Defaults to English ("en")
+#' @param set_labels a named vector to replace some elements with a user-defined label. For instance, c("hal:structure"="id de labo")
 #' @return
-#' a plot of the graph
+#' a tidygraph
 #' @export
 #'
 #' @examples
-graph_query <- function(query, layout="fr", flip=FALSE, label=FALSE) {
+graph_query <- function(query, labelling=FALSE, language="en", set_labels=NULL){
   # Create graph from triples
-  triples=query$triples %>% 
+  triples=query$triples %>%
     dplyr::mutate(data=purrr::map(triple,glitter:::decompose_triple_pattern)) %>%  
     dplyr::mutate(from=purrr::map_chr(data,~.x$subject),
                   to  =purrr::map_chr(data,~.x$object),
                   link=purrr::map_chr(data,~.x$verb)) %>% 
-    dplyr::select(-data)
-  graph=tidygraph::as_tbl_graph(triples) %>% 
-    dplyr::mutate(type=stringr::str_detect(name,"^\\?")) %>% 
+    dplyr::select(triple, required, from, to, link)
+  if(!all(is.na(query$vars$values))){
+    triples_values=query$vars %>% 
+       dplyr::filter(!is.na(values)) %>% 
+       dplyr::mutate(triple=values,
+                     required=TRUE,
+                     from=glitter:::question_mark(name),
+                     to=values,
+                     link="values in") %>% 
+       dplyr::select(triple, required, from, to, link)
+    triples=dplyr::bind_rows(triples,triples_values)
+    # Reorder triples by location in query:
+    triples=query$vars %>%
+     dplyr::mutate(triple=dplyr::case_when(!is.na(values)~values,
+                                           TRUE~triple)) %>% 
+     dplyr::select(triple) %>% 
+     unique() %>% 
+     dplyr::left_join(triples,by="triple")
+  } 
+
+  triples = triples  %>% 
+     dplyr::mutate(step=1:dplyr::n(),
+                    filtered=FALSE) 
+  if(labelling){
+      triples=triples %>% 
+         tidyr::pivot_longer(c("from","to","link"),
+                          names_to="type",
+                          values_to="label") %>%
+         dplyr::mutate(label=sequins:::replace_label(label,set_labels)) %>% 
+         dplyr::mutate(label=purrr::map_chr(label,
+                                     get_label,
+                                     language="en",
+                                     endpoint="wikidata",
+                                     label_property="rdfs:label"
+                                     )) %>% 
+        tidyr::pivot_wider(names_from="type",
+                           values_from="label")
+  }#if(labelling)
+  nodes=tibble::tibble(
+    name=c(triples$from,triples$to),
+    step=c(triples$step,triples$step)) %>% 
+    dplyr::mutate(type=stringr::str_detect(name,"^\\s*\\?")) %>% 
     dplyr::mutate(type=dplyr::case_when(type~"unknown",
-                                        !type~"set")) %>% 
-    dplyr::mutate(label=name) %>% 
-    dplyr::mutate(num=1:dplyr::n())
-  # if label is TRUE, change nodes' names from identifiers to labels 
-  if(label){
-    graph=graph %>% 
-      dplyr::mutate(label=purrr::map_chr(name,sequins::get_label))
-  }
-  # If there are set values for a variable:
-  tib_values=query$vars %>% 
-    dplyr::filter(!is.na(values))
-  if(nrow(tib_values)>0){
-    for (i in 1:nrow(tib_values)){
-       var=paste0("?",tib_values$name[i])
-       graph=graph %>% 
-          dplyr::mutate(type=dplyr::case_when(name==var~"set",
-                                              TRUE~type))      
-    }
-  }
-  # Create graphplot
-  graph_layout=ggraph::create_layout(graph, layout=layout)
-  graphplot=ggraph::ggraph(graph_layout)+
-    ggraph::geom_edge_link(
-      ggplot2::aes(label=link,
-                   label_size=3,
-                   end_cap=ggraph::label_rect(to, padding=ggplot2::margin(3,3,3,3,"mm"))),
-      angle_calc = 'along',
-      label_dodge = grid::unit(2.5, 'mm'),
-      arrow = ggplot2::arrow(length = grid::unit(6, 'mm')),
-      )+
-    ggraph::geom_node_label(ggplot2::aes(label=label,fill=type),
-                            size=3)+
-    ggraph::theme_graph(plot_margin=ggplot2::margin(60,60,60,60))+
-    ggplot2::coord_cartesian(clip="off")
-  if(flip){graphplot=graphplot +
-    ggplot2::coord_flip()
-  }
-  return(graphplot)
+                                             !type~"set")) %>%
+    dplyr::group_by(name,type) %>% 
+    dplyr::summarise(step=min(step),.groups="drop") %>% 
+    dplyr::arrange(step)
+  
+  nsteps=max(nodes$step, na.rm=TRUE)
+  graph=tidygraph::tbl_graph(edges=triples,nodes=nodes) 
+  # If there are calls to spq_filter:
+  # if(!is.null(query$filters)){
+  #   for (i in 1:nrow(query$filters)){
+  #     new_triple=tibble::tibble(
+  #                       required=TRUE,
+  #                       from=query$filters$var[i],
+  #                       to=paste0(" ",query$filters$var[i]," "),
+  #                       link=query$filters$filter[i])
+  #     triples=dplyr::bind_rows(triples,
+  #                              new_triple)
+  #   }
+  # }
+  # if(!is.null(query$filters)){
+  #   graph=graph %>% 
+  #     tidygraph::activate(nodes) %>% 
+  #     dplyr::mutate(filtered=dplyr::case_when(name %in% query$filters$var ~ TRUE,
+  #                                    TRUE ~ FALSE))
+  # }
+  # tib_values=query$vars %>% 
+  #   dplyr::filter(!is.na(values))
+  # if(nrow(tib_values)>0){
+  #   for (i in 1:nrow(tib_values)){
+  #      var=paste0("?",tib_values$name[i])
+  #      graph=graph %>% 
+  #         tidygraph::activate(nodes) %>% 
+  #         dplyr::mutate(type=dplyr::case_when(name==var~"set",
+  #                                             TRUE~type))      
+  #   }
+  # }
+  return(list(graph=graph, nsteps=nsteps))
 }
 ```
 
+## graph_query example
 
-
-```{r examples-graph_query-}
-library(glitter)
+```{r examples-graph_query}
 query=spq_init() %>%
   spq_add("?mayor wdt:P31 ?species") %>%
-  # dog, cat or chicken
   spq_set(species = c('wd:Q144','wd:Q146', 'wd:Q780')) %>%
-  # who occupy the function
   spq_add("?mayor p:P39 ?node") %>%
-  # of mayor
   spq_add("?node ps:P39 wd:Q30185") %>%
-  # of some places
   spq_add("?node pq:P642 ?place") 
 
-graph_query(query, layout="tree")
-graph_query(query, label=TRUE)
-
-
+graph_query(query,labelling=TRUE)
 ```
 
 ```{r tests-graph_query}
-
+test_that("graph_query works", {
+  expect_true(inherits(replace_label, "function")) 
+})
 ```
 
+# plot_query: plot query as a graph
 
+```{r function-plot_query}
+#' Plot query as a graph.
+#' @param query a query as returned by glitter (before call to spq_perform)
+#' @param labelling whether to label the identifiers in the graph
+#' @param language the language in which to label. Defaults to English ("en")
+#' @param set_labels a named vector to replace some elements with a user-defined label. For instance, c("hal:structure"="id de labo")
+#' @param layout type of layout. Can be e.g. "fr" or "tree". Defaults to "tree"
+#' @param flip whether to flip the coordinates. Defaults to FALSE
+#' @param legend whether to draw a legend. Defaults to FALSE 
+#' @return a plot of the graph depicting query
+#' 
+#' @export
+plot_query <- function(query,labelling=FALSE,language="en",set_labels=NULL,layout="tree",flip=FALSE, legend=FALSE,show_step=FALSE){
+  g=graph_query(query=query,
+                labelling=labelling,
+                language=language,
+                set_labels=set_labels)
+  nsteps=g$nsteps
+  if(show_step){
+    result=vector(mode="list",length=nsteps)
+        for (i in 1:nsteps){
+            graphi=g$graph
+            graphplot=plot_query_step(graph=graphi,plotstep=i)
+            result[[i]]=graphplot
+        }
+  }else{
+    result=plot_query_step(graph=g$graph,plotstep=nsteps)
+  }
+  return(result)
+}
+```
+
+```{r tests-plot_query}
+test_that("plot_query works", {
+  expect_true(inherits(plot_query, "function")) 
+})
+```
 
 ```{r development-inflate, eval=FALSE}
 # Keep eval=FALSE to avoid infinite loop in case you hit the knit button
@@ -112,65 +182,264 @@ graph_query(query, label=TRUE)
 fusen::inflate(flat_file = "dev/flat_full.Rmd", vignette_name = "Get started")
 ```
 
-# Other examples
-
-
-
-```{r fig.height=8}
-query=spq_init() %>%
-  spq_add("?doc dcterms:creator ?createur") %>%        
-  spq_add("?createur hal:structure ?affil") %>%        
-  spq_add("?createur hal:person ?personne") %>%        
-  spq_add("?personne foaf:name 'Lise Vaudor'") %>%
-  spq_add("?affil skos:prefLabel ?affiliation") %>%    
-  spq_add("?doc dcterms:type ?type") %>%            # récupère le type de document
-  spq_add("?type skos:prefLabel ?type_label") %>%   # étiquette le type de document      
-  spq_filter(lang(type_label) == 'fr') %>%          # ... en français
-  spq_add("?doc dcterms:bibliographicCitation ?citation") %>% # récupère la citation
-  spq_add("?doc dcterms:issued ?date") 
-
-graph_query(query, layout="tree")
-```
-
-# get_label
+# plot_query_step
     
-```{r function-get_label}
-#' Title
-#' @param string the string (a part of a triple pattern) to label
-#' @param language the language in which to return the label (defaults to "en")
-#' @param endpoint the SPARQL endpoint that is being queried (defaults to "Wikidata")
-#' @param labelling_prop the name of the labelling property, for instance "skos:prefLabel". Defaults to "rdfs:label"
-#' This function takes a component of a triple pattern as input and returns (if it exists) a corresponding human-readable label.
-#' @return the label corresponding to the string
+```{r function-plot_query_step}
+#' Plot query step as a graph.
+#' @param graph a tidygraph object
+#' @param plotstep the step to plot
+#' @param layout type of layout. Can be e.g. "fr" or "tree". Defaults to "tree"
+#' @param flip whether to flip the coordinates. Defaults to FALSE
+#' @param legend whether to draw a legend. Defaults to FALSE 
+#' @return a plot of the graph depicting query setp
+#' 
 #' @export
-get_label=function(string, language="en",endpoint="Wikidata", labelling_prop="rdfs:label"){
-  # if the string starts with "?" or "'" or '"'
-  if(stringr::str_detect(string,"^\\?|\\'")|stringr::str_detect(string,'^\\"')){
-    return(string)
-  }
-  result=spq_init() %>% 
-    spq_add(glue::glue("{string} {labelling_prop} ?string_label")) %>% 
-    spq_mutate(languages=lang(string_label)) %>% 
-    spq_perform(endpoint=endpoint) %>% 
-    dplyr::filter(languages==language) %>% 
-    .$string_label
-  return(result)
+plot_query_step <- function(graph,plotstep, layout="tree",flip=FALSE, legend=FALSE){
+      margin10=ggplot2::margin(10,10,10,10,"mm")
+      margin20=ggplot2::margin(20,20,20,20,"mm")
+      
+      graph=graph %>% 
+          tidygraph::activate(nodes) %>% 
+          dplyr::mutate(show=step<=plotstep) %>% 
+          dplyr::mutate(name=dplyr::case_when(step>plotstep~"",
+                                               TRUE~name))
+      graph=graph %>% 
+          tidygraph::activate(edges) %>% 
+          dplyr::mutate(show=step<=plotstep)%>% 
+          dplyr::mutate(link=dplyr::case_when(step>plotstep~"",
+                                               TRUE~link))
+      
+      graph_layout=ggraph::create_layout(graph, layout=layout)
+      graphplot=ggraph::ggraph(graph_layout)+
+        # edges
+        ggraph::geom_edge_link(
+          ggplot2::aes(label=link,
+                       label_size=3,
+                       alpha=show,
+                       end_cap=ggraph::label_rect(to, padding=margin10)),
+          angle_calc = 'along',
+          label_dodge = grid::unit(2.5, 'mm'),
+          arrow = ggplot2::arrow(length = grid::unit(6, 'mm')),
+          )+
+        # nodes
+        ggraph::geom_node_label(ggplot2::aes(label=name,
+                                             fill=type,
+                                             color=show,
+                                             alpha=show))+
+        ggraph::theme_graph(plot_margin=margin20)+
+        ggplot2::coord_cartesian(clip="off")+
+        ggplot2::scale_alpha_manual(breaks=c(TRUE,FALSE),
+                                    values=c(1,0))+
+        ggplot2::scale_color_manual(breaks=c(TRUE,FALSE),
+                                    values=c("black","white"))+
+        ggplot2::guides(alpha="none")
+      if(flip){
+        graphplot=graphplot +
+          ggplot2::coord_flip()+
+          ggplot2::scale_y_reverse()+
+          ggplot2::scale_x_reverse()
+      }
+      if(!legend){
+        graphplot=graphplot+
+          ggplot2::theme(legend.position="none")
+      } 
+      return(graphplot)
 }
+```
+  
+```{r example-plot_query_step}
+query=spq_init() %>%
+  spq_add("?mayor wdt:P31 ?species") %>%
+  spq_set(species = c('wd:Q144','wd:Q146', 'wd:Q780')) %>%
+  spq_add("?mayor p:P39 ?node") %>%
+  spq_add("?node ps:P39 wd:Q30185") %>%
+  spq_add("?node pq:P642 ?place") 
 
+gq=graph_query(query,labelling=TRUE)
+plot_query_step(gq$graph,plotstep=3)
 ```
   
-```{r example-label}
-sequins::get_label("wd:Q152088",language="en")
-sequins::get_label("'David Bowie'")
-sequins::get_label('"John Doe"')
-sequins::get_label("?item")
-```
-  
-```{r tests-label}
-test_that("label works", {
-  expect_true(inherits(get_label, "function")) 
+```{r tests-plot_query_step}
+test_that("plot_query_step works", {
+  expect_true(inherits(plot_query_step, "function")) 
 })
 ```
   
 
+## example animal mayors
 
+```{r example-plot_query}
+query=spq_init() %>%
+  spq_add("?mayor wdt:P31 ?species") %>%
+  spq_set(species = c('wd:Q144','wd:Q146', 'wd:Q780')) %>%
+  spq_add("?mayor p:P39 ?node") %>%
+  spq_add("?node ps:P39 wd:Q30185") %>%
+  spq_add("?node pq:P642 ?place") 
+
+plot_query(query)
+```
+
+## example hal
+
+```{r hal_example, fig.height=8}
+query=spq_init(endpoint="hal") %>%
+  spq_add("?doc dcterms:creator ?createur") %>%  
+  spq_add("?createur hal:structure ?affil") %>%     
+  spq_add("?createur hal:person ?personne") %>%        
+  spq_add("?personne foaf:name 'Lise Vaudor'") %>% 
+  spq_add("?doc dcterms:type ?type") %>% 
+  spq_label(affil,.languages=NULL) %>% 
+  spq_label(type,.languages="fr") %>% 
+  spq_add("?doc dcterms:bibliographicCitation ?citation") %>% # récupère la citation
+  spq_add("?doc dcterms:issued ?date") %>% 
+  spq_select(doc,date,citation,type_label)
+
+plot_query(query, layout="tree",flip=TRUE, set_labels=c("hal:structure"="id de labo"), show_step=TRUE)
+```
+
+
+# get_label_1
+    
+```{r function-get_label_1}
+#' This function takes a component of a triple pattern as input and returns (if it exists) a corresponding human-readable label.
+#' @param string the string (a part of a triple pattern) to label
+#' @param language the language in which to return the label (defaults to "en")
+#' @param endpoint the SPARQL endpoint that is being queried (defaults to "wikidata")
+#' @param label_property the name of the labelling property, for instance "skos:prefLabel". Defaults to "rdfs:label". If the endpoint is one of the usual glitter endpoints (see glitter::usual_endpoints) the labelling property is set accordingly.
+#' @return the label corresponding to the string
+#' @export
+get_label_1=function(string, language="en",endpoint="wikidata", label_property="rdfs:label"){
+        if(!glitter:::is_prefixed(string)){
+          return(string)
+        }
+        strings=print_values(string)
+        results=rep(NA,length(strings))
+        for (i in 1:length(strings)){
+            string=strings[i]
+            string=glitter:::str_replace(string,
+                                         "(^wdt\\:)|(^p\\:)|(^ps\\:)|(^pq\\:)",
+                                         "wd:")
+            result=glitter::spq_init(endpoint=endpoint) %>% 
+              glitter::spq_add(glue::glue("{string} {label_property} ?string_label")) %>% 
+              glitter::spq_mutate(languages=lang(string_label)) %>% 
+              glitter::spq_perform() %>% 
+              dplyr::filter(languages==language) %>%
+              .$string_label
+            if(length(result)==0){result=string}
+            results[i]=result
+        }
+        result=paste0(results,collapse="\n")
+        return(result)
+}
+```
+  
+```{r example-get_label_1}
+get_label_1("wdt:P31")
+get_label_1("{wd:Q144 wd:Q146 wd:Q780}")
+```
+  
+```{r tests-get_label_1}
+test_that("get_label_1 works", {
+  expect_true(inherits(get_label_1, "function")) 
+})
+```
+  
+# get_label
+
+```{r function-get_label}
+#' This function takes a component of a triple pattern as input and returns (if it exists) a corresponding human-readable label.
+#' @param string the string (a part of a triple pattern) to label
+#' @param language the language in which to return the label (defaults to "en")
+#' @param endpoint the SPARQL endpoint that is being queried (defaults to "wikidata")
+#' @param label_property the name of the labelling property, for instance "skos:prefLabel". Defaults to "rdfs:label". If the endpoint is one of the usual glitter endpoints (see glitter::usual_endpoints) the labelling property is set accordingly.
+#' @return the label corresponding to the string
+#' @export
+get_label=function(string, language="en",endpoint="wikidata", label_property="rdfs:label"){
+  if(endpoint %in% glitter::usual_endpoints$name){
+    index_endpoint=which(glitter::usual_endpoints$name==endpoint)
+    label_property=glitter::usual_endpoints$label_property[index_endpoint]
+  }
+  result=purrr::map_chr(string,
+                        get_label_1,
+                        language=language,
+                        endpoint=endpoint,
+                        label_property=label_property)
+  return(result)
+}
+```
+
+```{r example-get_label}
+get_label("wd:Q152088",language="en")
+get_label("wd:Q152088",language="fr")
+get_label(c("wdt:P31","wdt:P625","'David Bowie'","?item"), language="fr")
+get_label("hal:structure",endpoint="hal")
+```
+
+```{r tests-get_label}
+test_that("get_label works", {
+  expect_true(inherits(get_label, "function")) 
+})
+```
+
+# replace_label
+
+```{r function-replace_label}
+#' Replaces label with new label if label corresponds to one of the names of set_labels
+#' @param label a string to maybe replace
+#' @param set_labels a named vector with previous labels as names and new labels as values.
+#' @return a possibly new label
+#' 
+#' @noRd
+replace_label=function(label,set_labels){
+  replace_one_label=function(one_label,set_labels){
+    if(one_label %in% names(set_labels)){
+      index=which(names(set_labels)==one_label)
+      return(set_labels[[index]])
+    }else{return(one_label)}
+  }
+  result=purrr::map_chr(label,replace_one_label,set_labels)
+  return(result)
+}
+```
+
+```{r example-replace_label}
+sequins:::replace_label("hal:structure",c("hal:structure"="id de labo"))
+sequins:::replace_label(c("tuttut","pouetpouet","ouiiiink"),
+                        c("tuttut"="klaxon","pouetpouet"="corne de brume"))
+```
+
+```{r tests-replace_label}
+test_that("replace_label works", {
+  expect_true(inherits(replace_label, "function")) 
+})
+```
+
+
+# print_values
+    
+```{r function-print_values}
+#' Based on a list of values surrounded by curly brackets, returns printable list.
+#' @param values the values surrounded by curly brackets
+#' @return the printable list
+#' 
+#' @noRd
+print_values=function(values){
+       result=values %>% 
+           stringr::str_replace_all("(\\{)|(\\})","") %>% 
+           stringr::str_split(" ") %>%
+          .[[1]]
+       return(result)
+}
+      
+```
+  
+```{r example-print_values}
+print_values()
+```
+  
+```{r tests-print_values}
+test_that("print_values works", {
+  expect_true(inherits(print_values, "function")) 
+})
+```
+  
