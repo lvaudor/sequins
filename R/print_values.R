@@ -6,12 +6,13 @@
 #' 
 #' @noRd
 #' @examples
-#' print_values()
+#' sequins:::print_values("wdt:P31/wdt:P279*")
+#' sequins:::print_values("{wd:Q144 wd:Q146 wd:Q780}")
 print_values=function(values){
-       result=values %>% 
-           stringr::str_replace_all("(\\{)|(\\})","") %>% 
-           stringr::str_split(" ") %>%
-          .[[1]]
-       return(result)
+    result=values %>% 
+      glitter:::str_replace_all("/","|") %>% 
+      glitter:::str_replace_all("\\*","") %>% 
+      glitter:::str_replace_all("(\\{)|(\\})","") %>% 
+      glitter:::str_split("( )|(\\|)")
+      return(result)
 }
-      

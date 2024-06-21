@@ -10,7 +10,15 @@
 #' 
 #' @export
 #' @examples
-#' plot_query_step()
+#' query=spq_init() %>%
+#'   spq_add("?mayor wdt:P31 ?species") %>%
+#'   spq_set(species = c('wd:Q144','wd:Q146', 'wd:Q780')) %>%
+#'   spq_add("?mayor p:P39 ?node") %>%
+#'   spq_add("?node ps:P39 wd:Q30185") %>%
+#'   spq_add("?node pq:P642 ?place") 
+#'
+#' gq=graph_query(query,labelling=TRUE)
+#' plot_query_step(gq$graph,plotstep=3)
 plot_query_step <- function(graph,plotstep, layout="tree",flip=FALSE, legend=FALSE){
       margin10=ggplot2::margin(10,10,10,10,"mm")
       margin20=ggplot2::margin(20,20,20,20,"mm")
@@ -42,6 +50,7 @@ plot_query_step <- function(graph,plotstep, layout="tree",flip=FALSE, legend=FAL
         ggraph::geom_node_label(ggplot2::aes(label=name,
                                              fill=type,
                                              color=show,
+                                             size=required,
                                              alpha=show))+
         ggraph::theme_graph(plot_margin=margin20)+
         ggplot2::coord_cartesian(clip="off")+
@@ -49,7 +58,12 @@ plot_query_step <- function(graph,plotstep, layout="tree",flip=FALSE, legend=FAL
                                     values=c(1,0))+
         ggplot2::scale_color_manual(breaks=c(TRUE,FALSE),
                                     values=c("black","white"))+
+        ggplot2::scale_size_manual(breaks=c(TRUE,FALSE),
+                                   values=c(4,3))+
+        ggplot2::scale_fill_manual(breaks=c("set","unknown"),
+                                   values=c("#e1edfc","#ffe0e3"))+
         ggplot2::guides(alpha="none")
+      graphplot
       if(flip){
         graphplot=graphplot +
           ggplot2::coord_flip()+

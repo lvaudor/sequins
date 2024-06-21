@@ -29,4 +29,5 @@ This function takes a component of a triple pattern as input and returns (if it 
 \examples{
 get_label_1("wdt:P31")
 get_label_1("{wd:Q144 wd:Q146 wd:Q780}")
+get_label_1("wdt:P31/wdt:P279*")
 }

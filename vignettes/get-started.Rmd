@@ -49,7 +49,15 @@ graph_query(query,labelling=TRUE)
   
 
 ```{r example-plot_query_step}
-plot_query_step()
+query=spq_init() %>%
+  spq_add("?mayor wdt:P31 ?species") %>%
+  spq_set(species = c('wd:Q144','wd:Q146', 'wd:Q780')) %>%
+  spq_add("?mayor p:P39 ?node") %>%
+  spq_add("?node ps:P39 wd:Q30185") %>%
+  spq_add("?node pq:P642 ?place") 
+
+gq=graph_query(query,labelling=TRUE)
+plot_query_step(gq$graph,plotstep=3)
 ```
 
   
@@ -97,6 +105,7 @@ plot_query(query, layout="tree",flip=TRUE, set_labels=c("hal:structure"="id de l
 ```{r example-get_label_1}
 get_label_1("wdt:P31")
 get_label_1("{wd:Q144 wd:Q146 wd:Q780}")
+get_label_1("wdt:P31/wdt:P279*")
 ```
 
   
@@ -126,11 +135,10 @@ sequins:::replace_label(c("tuttut","pouetpouet","ouiiiink"),
 
   
 
-```{r example-print_values}
-print_values()
+  
+
+```{r examples-print_values}
+sequins:::print_values("wdt:P31/wdt:P279*")
+sequins:::print_values("{wd:Q144 wd:Q146 wd:Q780}")
 ```
-
-  
-
-  
 

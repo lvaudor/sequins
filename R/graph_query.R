@@ -16,7 +16,8 @@ graph_query <- function(query, labelling=FALSE, language="en", set_labels=NULL){
     dplyr::mutate(from=purrr::map_chr(data,~.x$subject),
                   to  =purrr::map_chr(data,~.x$object),
                   link=purrr::map_chr(data,~.x$verb)) %>% 
-    dplyr::select(triple, required, from, to, link)
+    dplyr::select(triple, required, from, to, link) %>% 
+    dplyr::mutate(to=glitter:::str_replace(to, "_labell$","_label"))
   if(!all(is.na(query$vars$values))){
     triples_values=query$vars %>% 
        dplyr::filter(!is.na(values)) %>% 
@@ -62,7 +63,13 @@ graph_query <- function(query, labelling=FALSE, language="en", set_labels=NULL){
                                              !type~"set")) %>%
     dplyr::group_by(name,type) %>% 
     dplyr::summarise(step=min(step),.groups="drop") %>% 
-    dplyr::arrange(step)
+    dplyr::arrange(step) %>% 
+    dplyr::left_join(triples %>% dplyr::select(from,required), by=c("name"="from")) %>% 
+    dplyr::left_join(triples %>% dplyr::select(to,required), by=c("name"="to")) %>% 
+    tidyr::pivot_longer(dplyr::starts_with("required"), names_to="from_or_to",values_to="required") %>% 
+    dplyr::filter(!is.na(required)) %>% 
+    dplyr::group_by(name,type,step) %>% 
+    dplyr::summarise(required=any(required))
   
   nsteps=max(nodes$step, na.rm=TRUE)
   graph=tidygraph::tbl_graph(edges=triples,nodes=nodes) 

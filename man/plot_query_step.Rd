@@ -24,5 +24,13 @@ a plot of the graph depicting query setp
 Plot query step as a graph.
 }
 \examples{
-plot_query_step()
+query=spq_init() \%>\%
+  spq_add("?mayor wdt:P31 ?species") \%>\%
+  spq_set(species = c('wd:Q144','wd:Q146', 'wd:Q780')) \%>\%
+  spq_add("?mayor p:P39 ?node") \%>\%
+  spq_add("?node ps:P39 wd:Q30185") \%>\%
+  spq_add("?node pq:P642 ?place") 
+
+gq=graph_query(query,labelling=TRUE)
+plot_query_step(gq$graph,plotstep=3)
 }

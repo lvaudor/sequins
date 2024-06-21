@@ -10,6 +10,7 @@
 #' @examples
 #' get_label_1("wdt:P31")
 #' get_label_1("{wd:Q144 wd:Q146 wd:Q780}")
+#' get_label_1("wdt:P31/wdt:P279*")
 get_label_1=function(string, language="en",endpoint="wikidata", label_property="rdfs:label"){
         if(!glitter:::is_prefixed(string)){
           return(string)

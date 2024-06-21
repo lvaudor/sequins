@@ -34,7 +34,8 @@ graph_query <- function(query, labelling=FALSE, language="en", set_labels=NULL){
     dplyr::mutate(from=purrr::map_chr(data,~.x$subject),
                   to  =purrr::map_chr(data,~.x$object),
                   link=purrr::map_chr(data,~.x$verb)) %>% 
-    dplyr::select(triple, required, from, to, link)
+    dplyr::select(triple, required, from, to, link) %>% 
+    dplyr::mutate(to=glitter:::str_replace(to, "_labell$","_label"))
   if(!all(is.na(query$vars$values))){
     triples_values=query$vars %>% 
        dplyr::filter(!is.na(values)) %>% 
@@ -80,7 +81,13 @@ graph_query <- function(query, labelling=FALSE, language="en", set_labels=NULL){
                                              !type~"set")) %>%
     dplyr::group_by(name,type) %>% 
     dplyr::summarise(step=min(step),.groups="drop") %>% 
-    dplyr::arrange(step)
+    dplyr::arrange(step) %>% 
+    dplyr::left_join(triples %>% dplyr::select(from,required), by=c("name"="from")) %>% 
+    dplyr::left_join(triples %>% dplyr::select(to,required), by=c("name"="to")) %>% 
+    tidyr::pivot_longer(dplyr::starts_with("required"), names_to="from_or_to",values_to="required") %>% 
+    dplyr::filter(!is.na(required)) %>% 
+    dplyr::group_by(name,type,step) %>% 
+    dplyr::summarise(required=any(required))
   
   nsteps=max(nodes$step, na.rm=TRUE)
   graph=tidygraph::tbl_graph(edges=triples,nodes=nodes) 
@@ -225,6 +232,7 @@ plot_query_step <- function(graph,plotstep, layout="tree",flip=FALSE, legend=FAL
         ggraph::geom_node_label(ggplot2::aes(label=name,
                                              fill=type,
                                              color=show,
+                                             size=required,
                                              alpha=show))+
         ggraph::theme_graph(plot_margin=margin20)+
         ggplot2::coord_cartesian(clip="off")+
@@ -232,7 +240,12 @@ plot_query_step <- function(graph,plotstep, layout="tree",flip=FALSE, legend=FAL
                                     values=c(1,0))+
         ggplot2::scale_color_manual(breaks=c(TRUE,FALSE),
                                     values=c("black","white"))+
+        ggplot2::scale_size_manual(breaks=c(TRUE,FALSE),
+                                   values=c(4,3))+
+        ggplot2::scale_fill_manual(breaks=c("set","unknown"),
+                                   values=c("#e1edfc","#ffe0e3"))+
         ggplot2::guides(alpha="none")
+      graphplot
       if(flip){
         graphplot=graphplot +
           ggplot2::coord_flip()+
@@ -336,6 +349,7 @@ get_label_1=function(string, language="en",endpoint="wikidata", label_property="
 ```{r example-get_label_1}
 get_label_1("wdt:P31")
 get_label_1("{wd:Q144 wd:Q146 wd:Q780}")
+get_label_1("wdt:P31/wdt:P279*")
 ```
   
 ```{r tests-get_label_1}
@@ -424,17 +438,13 @@ test_that("replace_label works", {
 #' 
 #' @noRd
 print_values=function(values){
-       result=values %>% 
-           stringr::str_replace_all("(\\{)|(\\})","") %>% 
-           stringr::str_split(" ") %>%
-          .[[1]]
-       return(result)
+    result=values %>% 
+      glitter:::str_replace_all("/","|") %>% 
+      glitter:::str_replace_all("\\*","") %>% 
+      glitter:::str_replace_all("(\\{)|(\\})","") %>% 
+      glitter:::str_split("( )|(\\|)")
+      return(result)
 }
-      
-```
-  
-```{r example-print_values}
-print_values()
 ```
   
 ```{r tests-print_values}
@@ -443,3 +453,7 @@ test_that("print_values works", {
 })
 ```
   
+```{r examples-print_values}
+sequins:::print_values("wdt:P31/wdt:P279*")
+sequins:::print_values("{wd:Q144 wd:Q146 wd:Q780}")
+```
