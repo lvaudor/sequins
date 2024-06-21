@@ -19,6 +19,9 @@
     <loc>https://lvaudor.github.io/sequins/reference/get_label.html</loc>
   </url>
   <url>
+    <loc>https://lvaudor.github.io/sequins/reference/get_label_1.html</loc>
+  </url>
+  <url>
     <loc>https://lvaudor.github.io/sequins/reference/graph_query.html</loc>
   </url>
   <url>
@@ -26,5 +29,11 @@
   </url>
   <url>
     <loc>https://lvaudor.github.io/sequins/reference/pipe.html</loc>
+  </url>
+  <url>
+    <loc>https://lvaudor.github.io/sequins/reference/plot_query.html</loc>
+  </url>
+  <url>
+    <loc>https://lvaudor.github.io/sequins/reference/plot_query_step.html</loc>
   </url>
 </urlset>
